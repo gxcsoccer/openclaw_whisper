@@ -1,0 +1,179 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenClaw Whisper STT",
+    "description": "本地语音转文字服务，基于 whisper.cpp 构建，为 OpenClaw 飞书机器人提供语音识别能力。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8765",
+      "description": "本地开发服务器"
+    }
+  ],
+  "paths": {
+    "/transcribe": {
+      "post": {
+        "summary": "语音转文字",
+        "description": "上传音频文件，返回转录文本。支持 WAV、Opus、OGG、MP3 格式，非 WAV 格式会自动通过 ffmpeg 转换。",
+        "operationId": "transcribe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "音频文件（WAV / Opus / OGG / MP3）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "转录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribeResponse"
+                },
+                "example": {
+                  "text": "你好世界"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "上传文件为空",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPError"
+                },
+                "example": {
+                  "detail": "Empty file"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "请求参数校验失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "转录失败（ffmpeg 转换出错或 whisper.cpp 执行失败）"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "健康检查",
+        "description": "检查服务是否正常运行，返回服务状态和当前加载的模型路径。",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "服务正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "model": "/path/to/ggml-large-v3.bin"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TranscribeResponse": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "转录后的文本内容"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "model"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "服务状态",
+            "example": "ok"
+          },
+          "model": {
+            "type": "string",
+            "description": "当前加载的模型文件路径",
+            "example": "/path/to/ggml-large-v3.bin"
+          }
+        }
+      },
+      "HTTPError": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "description": "错误详情"
+          }
+        }
+      },
+      "HTTPValidationError": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "properties": {
+          "loc": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                { "type": "string" },
+                { "type": "integer" }
+              ]
+            },
+            "description": "错误定位路径"
+          },
+          "msg": {
+            "type": "string",
+            "description": "错误信息"
+          },
+          "type": {
+            "type": "string",
+            "description": "错误类型"
+          }
+        }
+      }
+    }
+  }
+}
