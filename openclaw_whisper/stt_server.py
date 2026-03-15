@@ -55,6 +55,34 @@ async def transcribe(file: UploadFile):
     return {"text": text}
 
 
+@app.post("/transcribe_segments")
+async def transcribe_segments(file: UploadFile):
+    """Accept an audio file and return segments with timestamps."""
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(400, "Empty file")
+
+    filename = file.filename or ""
+    if filename.endswith(".opus"):
+        fmt = "opus"
+    elif filename.endswith(".ogg"):
+        fmt = "ogg"
+    elif filename.endswith(".mp3"):
+        fmt = "mp3"
+    elif filename.endswith(".wav"):
+        fmt = "wav"
+    else:
+        fmt = "wav"
+
+    if fmt != "wav":
+        wav_bytes = to_wav_16k(raw, input_format=fmt)
+    else:
+        wav_bytes = raw
+
+    segments = transcriber.transcribe_segments_bytes(wav_bytes)
+    return {"segments": segments}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "model": settings.whisper.model_path}
